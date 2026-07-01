@@ -8,11 +8,12 @@ from BE.connection import Connection
 from BE.messages import Messages
 from BE.parser import Parser
 from config import HEARTBEAT_INTERVAL
-from BE.shared import rfid_queue
+from queue import Queue
 
-class XMLReader():
-    def __init__(self):
+class XMLReader:
+    def __init__(self, event_queue: Queue):
         self.conn = Connection()
+        self.event_queue = event_queue
         self.buffer = ""
         self.running = False
         self.heartbeat_thread = None
@@ -94,11 +95,10 @@ class XMLReader():
                     )
 
                     for frame in frames:
-                        for frame in frames:
-                            events = Parser.parse(frame)
+                        events = Parser.parse(frame)
 
                         for event in events:
-                            rfid_queue.put(event)
+                            self.event_queue.put(event)
 
             except (
                 socket.timeout,

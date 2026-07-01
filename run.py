@@ -4,17 +4,17 @@ import time
 from queue import Empty
 
 from FE.dashboard import run_dash, set_dashboard_state_provider
-from BE.shared import rfid_queue
+from queue import Queue
 from BE.xml_reader import XMLReader
 from BE.rfid_decode import decode_epc
 
 epc_map = {}
 
-def process_rfid_queue(stop_event):
+def process_rfid_queue(stop_event, event_queue):
     while not stop_event.is_set():
         try:
             while True:
-                item = rfid_queue.get_nowait()
+                item = event_queue.get_nowait()
 
                 epc = item.epc
                 tid = item.tid
@@ -59,7 +59,7 @@ def clear_data():
 
 def main():
     stop_event = threading.Event()
-
+    rfid_queue = Queue()
     set_dashboard_state_provider(get_dashboard_state, clear_data)
 
     dashboard_thread = threading.Thread(
@@ -70,12 +70,12 @@ def main():
 
     queue_thread = threading.Thread(
         target=process_rfid_queue,
-        args=(stop_event,),
+        args=(stop_event, rfid_queue),
         daemon=True,
     )
     queue_thread.start()
 
-    reader = XMLReader()
+    reader = XMLReader(rfid_queue)
 
     try:
         reader.start()
