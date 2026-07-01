@@ -6,14 +6,14 @@ import socket
 
 from BE.connection import Connection
 from BE.messages import Messages
-from BE.parser import Parser
+from BE.xml_parser import XMLParser
 from config import HEARTBEAT_INTERVAL
-from queue import Queue
 
 class XMLReader:
-    def __init__(self, event_queue: Queue):
+    def __init__(self, event_queue, parser):
         self.conn = Connection()
         self.event_queue = event_queue
+        self.parser = parser
         self.buffer = ""
         self.running = False
         self.heartbeat_thread = None
@@ -90,12 +90,10 @@ class XMLReader:
                         errors="ignore"
                     )
 
-                    frames, self.buffer = Parser.extract_revelant_frames(
-                        self.buffer
-                    )
+                    frames, self.buffer = self.parser.extract_frames(self.buffer)
 
                     for frame in frames:
-                        events = Parser.parse(frame)
+                        events = self.parser.parse_frame(frame)
 
                         for event in events:
                             self.event_queue.put(event)

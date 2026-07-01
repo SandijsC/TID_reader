@@ -8,6 +8,7 @@ from queue import Queue
 from BE.xml_reader import XMLReader
 from BE.rfid_decode import decode_epc
 from BE.tag_manager import TagManager
+from BE.xml_parser import XMLParser
 
 
 tag_manager = TagManager()
@@ -49,7 +50,12 @@ def main():
     )
     queue_thread.start()
 
-    reader = XMLReader(rfid_queue)
+    parser = XMLParser()
+
+    reader = XMLReader(
+        rfid_queue,
+        parser
+    )
 
     try:
         reader.start()
