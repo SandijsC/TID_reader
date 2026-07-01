@@ -3,7 +3,7 @@
 import time
 import xml.etree.ElementTree as ET
 
-from shared import rfid_queue
+from BE.shared import rfid_queue
 
 
 class Parser:

@@ -4,9 +4,9 @@ import threading
 import time
 import socket
 
-from connection import Connection
-from messages import Messages
-from parser import Parser
+from BE.connection import Connection
+from BE.messages import Messages
+from BE.parser import Parser
 from config import HEARTBEAT_INTERVAL
 
 

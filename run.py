@@ -1,11 +1,12 @@
+# run.py
 import threading
 import time
 from queue import Empty
 
-from dashboard import run_dash, set_dashboard_state_provider
-from shared import rfid_queue
-from xml_reader import XMLReader
-from rfid_decode import decode_epc
+from FE.dashboard import run_dash, set_dashboard_state_provider
+from BE.shared import rfid_queue
+from BE.xml_reader import XMLReader
+from BE.rfid_decode import decode_epc
 
 epc_map = {}
 
