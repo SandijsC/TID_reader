@@ -7,41 +7,17 @@ from FE.dashboard import run_dash, set_dashboard_state_provider
 from queue import Queue
 from BE.xml_reader import XMLReader
 from BE.rfid_decode import decode_epc
+from BE.tag_manager import TagManager
 
-epc_map = {}
 
-def process_rfid_queue(stop_event, event_queue):
+tag_manager = TagManager()
+
+def process_rfid_queue(stop_event, event_queue, tag_manager: TagManager):
     while not stop_event.is_set():
         try:
             while True:
-                item = event_queue.get_nowait()
-
-                epc = item.epc
-                tid = item.tid
-                timestamp = item.timestamp
-
-                if not epc:
-                    continue
-
-                if epc not in epc_map:
-                    epc_map[epc] = {
-                        "first_seen_at": timestamp,
-                        "tids": set(),
-                    }
-
-                if tid:
-                    epc_map[epc]["tids"].add(tid)
-
-                epc_info = decode_epc(epc)
-                barcode = epc_info.barcode
-                epc_map[epc]["barcode"] = barcode
-                epc_map[epc]["last_seen_at"] = timestamp
-                epc_map[epc]["reading_time"] = epc_map[epc]["last_seen_at"] - epc_map[epc]["first_seen_at"]
-                epc_map[epc]["tid_count"] = len(epc_map[epc]["tids"])
-                if epc_map[epc]["tid_count"] < 2:
-                    epc_map[epc]["status"] = "FAILED"
-                else:
-                    epc_map[epc]["status"] = "PASSED"
+                event = event_queue.get_nowait()
+                tag_manager.process(event)
 
         except Empty:
             pass
@@ -50,12 +26,10 @@ def process_rfid_queue(stop_event, event_queue):
 
 
 def get_dashboard_state():
-    return epc_map
+    return tag_manager.get_state()
 
 def clear_data():
-    print(epc_map)
-    epc_map.clear()
-    print(epc_map)
+    tag_manager.clear()
 
 def main():
     stop_event = threading.Event()
@@ -70,7 +44,7 @@ def main():
 
     queue_thread = threading.Thread(
         target=process_rfid_queue,
-        args=(stop_event, rfid_queue),
+        args=(stop_event, rfid_queue, tag_manager),
         daemon=True,
     )
     queue_thread.start()
