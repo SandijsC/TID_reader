@@ -3,7 +3,7 @@
 import time
 import xml.etree.ElementTree as ET
 
-from BE.shared import rfid_queue
+from BE.models import RFIDEvent
 
 
 class Parser:
@@ -43,6 +43,49 @@ class Parser:
                 frames.append(frame)
 
         return frames, buffer
+    
+    @staticmethod
+    def parse(xml: str) -> list[RFIDEvent]:
+        """
+        Parse an XML frame and return all RFID events found.
+        """
+        try:
+            root = ET.fromstring(xml)
+        except ET.ParseError as e:
+            print("XML Parse Error:", e)
+            return []
+
+        events = []
+
+        for tag in root.findall(".//tag"):
+
+            tag_id = tag.findtext("tagID")
+            event = tag.findtext("event")
+            antenna = tag.findtext("antennaName")
+            rssi = tag.findtext("rSSI")
+
+            tid = None
+
+            for field in tag.findall("tagField"):
+                if field.findtext("fieldName") == "TID":
+                    tid = field.findtext("data")
+                    break
+
+            if not tid:
+                continue
+
+            events.append(
+                RFIDEvent(
+                    epc=tag_id,
+                    tid=tid,
+                    event=event,
+                    antenna=antenna,
+                    rssi=float(rssi) if rssi else 0.0,
+                    timestamp=time.time(),
+                )
+            )
+
+        return events
 
     @staticmethod
     def populate_queue(xml):

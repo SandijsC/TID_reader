@@ -16,9 +16,9 @@ def process_rfid_queue(stop_event):
             while True:
                 item = rfid_queue.get_nowait()
 
-                epc = item.get("tag_id")
-                tid = item.get("tid")
-                timestamp = item.get("timestamp")
+                epc = item.epc
+                tid = item.tid
+                timestamp = item.timestamp
 
                 if not epc:
                     continue
