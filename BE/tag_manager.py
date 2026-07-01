@@ -1,15 +1,12 @@
 from BE.rfid_decode import decode_epc
+from BE.models import RFIDTag
 
 
 class TagManager:
     def __init__(self):
-        self.tags = {}
+        self.tags: dict[str, RFIDTag] = {}
 
     def process(self, event):
-        """
-        Processes a single RFIDEvent.
-        """
-
         epc = event.epc
         tid = event.tid
         timestamp = event.timestamp
@@ -18,26 +15,17 @@ class TagManager:
             return
 
         if epc not in self.tags:
-            self.tags[epc] = {
-                "first_seen_at": timestamp,
-                "tids": set(),
-            }
+            epc_info = decode_epc(epc)
+
+            self.tags[epc] = RFIDTag(
+                epc=epc,
+                barcode=epc_info.barcode,
+                first_seen_at=timestamp,
+                last_seen_at=timestamp,
+            )
 
         tag = self.tags[epc]
-
-        if tid:
-            tag["tids"].add(tid)
-
-        epc_info = decode_epc(epc)
-
-        tag["barcode"] = epc_info.barcode
-        tag["last_seen_at"] = timestamp
-        tag["reading_time"] = tag["last_seen_at"] - tag["first_seen_at"]
-        tag["tid_count"] = len(tag["tids"])
-
-        tag["status"] = (
-            "PASSED" if tag["tid_count"] >= 2 else "FAILED"
-        )
+        tag.update(tid, timestamp)
 
     def get_state(self):
         return self.tags

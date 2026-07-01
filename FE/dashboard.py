@@ -136,19 +136,19 @@ def update(n_intervals, n_clicks):
 
     rows = []
     for i, (epc, tag_data) in enumerate(epc_map.items(), start=1):
-        tids = sorted(tag_data.get("tids", []))
-        barcode = tag_data.get("barcode", "")
+        tids = sorted(tag_data.tids)
+        barcode = tag_data.barcode
         first_seen = datetime.fromtimestamp(
-            tag_data["first_seen_at"]
+            tag_data.first_seen_at
         ).strftime("%H:%M:%S")
 
         last_seen = datetime.fromtimestamp(
-            tag_data["last_seen_at"]
+            tag_data.last_seen_at
         ).strftime("%H:%M:%S")
 
-        reading_time = f"{tag_data.get('reading_time', 0) * 1000:.0f} ms"
-        tid_count = str(tag_data.get("tid_count", ""))
-        status = tag_data.get("status", "")
+        reading_time = f"{tag_data.reading_time * 1000:.0f} ms"
+        tid_count = str(tag_data.tid_count)
+        status = tag_data.status
 
         rows.append(
             html.Tr(
@@ -242,13 +242,13 @@ def export_excel(_):
     for epc, tag_data in epc_map.items():
         rows.append({
             "EPC": epc,
-            "TIDs": ", ".join(tag_data.get("tids", [])),
-            "Barcode": tag_data.get("barcode", 0),
-            "First Seen": datetime.fromtimestamp(tag_data["first_seen_at"]),
-            "Last Seen": datetime.fromtimestamp(tag_data["last_seen_at"]),
-            "Read Time (ms)": round(tag_data.get("reading_time", 0) * 1000, 2),
-            "TID Count": tag_data.get("tid_count", 0),
-            "Status": tag_data.get("status", ""),
+            "TIDs": ", ".join(tag_data.tids),
+            "Barcode": tag_data.barcode,
+            "First Seen": datetime.fromtimestamp(tag_data.first_seen_at),
+            "Last Seen": datetime.fromtimestamp(tag_data.last_seen_at),
+            "Read Time (ms)": round(tag_data.reading_time * 1000, 2),
+            "TID Count": tag_data.tid_count,
+            "Status": tag_data.status,
         })
 
     df = pd.DataFrame(rows)
