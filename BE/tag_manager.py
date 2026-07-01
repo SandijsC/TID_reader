@@ -1,31 +1,20 @@
-from BE.rfid_decode import decode_epc
 from BE.models import RFIDTag
-
 
 class TagManager:
     def __init__(self):
-        self.tags: dict[str, RFIDTag] = {}
+        self.tags = {}
 
     def process(self, event):
-        epc = event.epc
-        tid = event.tid
-        timestamp = event.timestamp
-
-        if not epc:
+        if not event.epc:
             return
 
-        if epc not in self.tags:
-            epc_info = decode_epc(epc)
+        tag = self.tags.get(event.epc)
 
-            self.tags[epc] = RFIDTag(
-                epc=epc,
-                barcode=epc_info.barcode,
-                first_seen_at=timestamp,
-                last_seen_at=timestamp,
-            )
+        if tag is None:
+            tag = RFIDTag.from_event(event)
+            self.tags[event.epc] = tag
 
-        tag = self.tags[epc]
-        tag.update(tid, timestamp)
+        tag.update(event.tid, event.timestamp)
 
     def get_state(self):
         return self.tags

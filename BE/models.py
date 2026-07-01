@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-
+from BE.rfid_decode import decode_epc
 
 @dataclass(slots=True)
 class RFIDEvent:
@@ -24,7 +24,6 @@ class RFIDTag:
 
     def update(self, tid: str | None, timestamp: float):
         self.last_seen_at = timestamp
-
         if tid:
             self.tids.add(tid)
 
@@ -39,3 +38,17 @@ class RFIDTag:
     @property
     def status(self) -> str:
         return "PASSED" if self.tid_count >= 2 else "FAILED"
+
+    @classmethod
+    def from_event(cls, event):
+        """
+        Create a new RFIDTag from an incoming RFIDEvent.
+        """
+        epc_info = decode_epc(event.epc)
+
+        return cls(
+            epc=event.epc,
+            barcode=epc_info.barcode,
+            first_seen_at=event.timestamp,
+            last_seen_at=event.timestamp,
+        )
