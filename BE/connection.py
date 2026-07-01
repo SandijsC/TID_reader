@@ -3,6 +3,7 @@
 import socket
 import threading
 import time
+import traceback
 
 from config import HOST, PORT
 
@@ -93,6 +94,7 @@ class Connection:
         """
         Close the socket safely.
         """
+
         if self.sock:
             try:
                 self.sock.shutdown(socket.SHUT_RDWR)

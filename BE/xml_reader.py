@@ -1,131 +1,37 @@
 # xml_reader.py
-
-import threading
-import time
 import socket
 
-from BE.connection import Connection
-from BE.messages import Messages
-from BE.xml_parser import XMLParser
-from config import HEARTBEAT_INTERVAL
-
 class XMLReader:
-    def __init__(self, event_queue, parser):
-        self.conn = Connection()
-        self.event_queue = event_queue
+    def __init__(self, connection, parser, event_queue):
+        self.conn = connection
         self.parser = parser
+        self.event_queue = event_queue
         self.buffer = ""
-        self.running = False
-        self.heartbeat_thread = None
 
-    def connect(self):
-        """
-        Connect to the reader and perform the XML greeting.
-        """
-        self.conn.connect()
-        self.conn.send(Messages.host_greetings())
+    def read_loop(self):
+        print("Reader loop started")
 
-    def _heartbeat_loop(self):
-        """
-        Sends heartbeat messages periodically while connected.
-        Runs in its own thread.
-        """
-        while self.running and self.conn.sock:
+        while True:
             try:
-                time.sleep(HEARTBEAT_INTERVAL)
+                data = self.conn.receive(65536)
 
-                if self.running and self.conn.sock:
-                    self.conn.send(Messages.heartbeat())
+            except socket.timeout:
+                continue  # THIS IS REQUIRED
 
             except Exception as e:
-                print("Heartbeat failed:", e)
+                print("Reader loop crashed:", e)
                 break
 
-    def _start_readpoints(self):
-        print("Starting Readpoint_L...")
-        self.conn.send(Messages.trigger("Readpoint_L", "Start"))
+            if not data:
+                print("Connection closed (no data)")
+                break
 
-        time.sleep(0.1)
+            self.buffer += data.decode("utf-8", errors="ignore")
 
-        print("Starting Readpoint_R...")
-        self.conn.send(Messages.trigger("Readpoint_R", "Start"))
+            frames, self.buffer = self.parser.extract_frames(self.buffer)
 
-    def start(self):
-        """
-        Main receive loop.
-        Automatically reconnects if the socket is lost.
-        """
-        self.running = True
+            for frame in frames:
+                events = self.parser.parse_frame(frame)
 
-        while self.running:
-
-            try:
-                if not self.conn.sock:
-                    print("Connecting to XML reader...")
-                    self.connect()
-
-                    self.buffer = ""
-
-                    # Start heartbeat thread
-                    self.heartbeat_thread = threading.Thread(
-                        target=self._heartbeat_loop,
-                        daemon=True
-                    )
-                    self.heartbeat_thread.start()
-
-                    # Start streaming
-                    self._start_readpoints()
-
-                while self.running and self.conn.sock:
-
-                    data = self.conn.receive(65536)
-
-                    # print(data.decode("utf-8", errors="ignore"))
-
-                    if not data:
-                        raise ConnectionError("Connection closed by reader")
-
-                    self.buffer += data.decode(
-                        "utf-8",
-                        errors="ignore"
-                    )
-
-                    frames, self.buffer = self.parser.extract_frames(self.buffer)
-
-                    for frame in frames:
-                        events = self.parser.parse_frame(frame)
-
-                        for event in events:
-                            self.event_queue.put(event)
-
-            except (
-                socket.timeout,
-                TimeoutError,
-            ):
-                # Normal timeout; continue waiting
-                continue
-
-            except Exception as e:
-
-                print(f"XML connection lost: {e}")
-
-                self.conn.close()
-
-                if self.running:
-                    print("Reconnecting in 2 seconds...")
-                    time.sleep(2)
-
-    def stop(self):
-        """
-        Stop reader cleanly.
-        """
-        self.running = False
-
-        try:
-            if self.conn.sock:
-                self.conn.send(Messages.trigger("Readpoint_L", "Stop"))
-                self.conn.send(Messages.trigger("Readpoint_R", "Stop"))
-        except Exception:
-            pass
-
-        self.conn.close()
+                for event in events:
+                    self.event_queue.put(event)
