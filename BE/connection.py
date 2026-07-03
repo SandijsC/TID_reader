@@ -3,7 +3,6 @@
 import socket
 import threading
 import time
-import traceback
 
 from config import HOST, PORT
 
