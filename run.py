@@ -1,15 +1,26 @@
 # run.py
+
 import threading
 import time
 from queue import Queue, Empty
 
 from FE.dashboard import run_dash, set_dashboard_state_provider
+
 from BE.xml_reader import XMLReader
 from BE.tag_manager import TagManager
 from BE.xml_parser import XMLParser
 from BE.reader_controller import ReaderController
 from BE.connection import Connection
-from config import HEARTBEAT_INTERVAL
+from BE.mqtt_plc_bridge import PlcMqttBridge
+
+from config import (
+    HEARTBEAT_INTERVAL,
+    MQTT_BROKER,
+    MQTT_PORT,
+    MQTT_REQUEST_TOPIC,
+    MQTT_RESPONSE_TOPIC,
+    MQTT_QOS,
+)
 
 
 tag_manager = TagManager()
@@ -21,6 +32,7 @@ def process_rfid_queue(stop_event, event_queue, tag_manager: TagManager):
             while True:
                 event = event_queue.get_nowait()
                 tag_manager.process(event)
+
         except Empty:
             pass
 
@@ -54,6 +66,15 @@ def main():
     )
     queue_thread.start()
 
+    mqtt_bridge = PlcMqttBridge(
+        broker=MQTT_BROKER,
+        port=MQTT_PORT,
+        request_topic=MQTT_REQUEST_TOPIC,
+        response_topic=MQTT_RESPONSE_TOPIC,
+        state_provider=get_dashboard_state,
+        qos=MQTT_QOS,
+    )
+
     connection = Connection()
     parser = XMLParser()
 
@@ -70,10 +91,11 @@ def main():
     )
 
     try:
+        mqtt_bridge.start()
+
         controller.start()
         print("Controller started")
 
-        # Keep the main thread alive until Ctrl+C
         while True:
             time.sleep(1)
 
@@ -84,6 +106,11 @@ def main():
         print("Cleaning up...")
 
         stop_event.set()
+
+        try:
+            mqtt_bridge.stop()
+        except Exception as e:
+            print(f"Error while stopping MQTT bridge: {e}")
 
         try:
             controller.stop()
