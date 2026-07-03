@@ -1,0 +1,4 @@
+dash
+pandas
+openpyxl
+paho-mqtt>=2.0.0
