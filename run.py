@@ -11,13 +11,11 @@ def main():
     rfidManager.startDashboard()
     rfidManager.startReading()
 
+    print("RFID manager running.")
+    print("RFID state will be printed when an MQTT request is received.")
+
     try:
         while True:
-            crateData = rfidManager.getCrateData()
-
-            if crateData:
-                print(crateData)
-
             time.sleep(1)
 
     except KeyboardInterrupt:
