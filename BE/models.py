@@ -16,10 +16,12 @@ class RFIDEvent:
 
 @dataclass(slots=True)
 class RFIDTag:
+    crate_id:str
     epc: str
     barcode: str
     first_seen_at: float
     last_seen_at: float
+    is_rejected: bool
     tids: set[str] = field(default_factory=set)
 
     def update(self, tid: str | None, timestamp: float):
@@ -40,10 +42,7 @@ class RFIDTag:
         return "PASSED" if self.tid_count >= 2 else "FAILED"
 
     @classmethod
-    def from_event(cls, event):
-        """
-        Create a new RFIDTag from an incoming RFIDEvent.
-        """
+    def from_event(cls, event: RFIDEvent):
         epc_info = decode_epc(event.epc)
 
         return cls(
@@ -51,4 +50,18 @@ class RFIDTag:
             barcode=epc_info.barcode,
             first_seen_at=event.timestamp,
             last_seen_at=event.timestamp,
+            crate_id=0,
+            is_rejected=True
         )
+        
+    @classmethod
+    def empty(cls, crate_id: str):
+        return cls(
+               crate_id=crate_id if crate_id else "NOT_AVAILABLE",
+               epc="NOT_AVAILABLE",
+               barcode="NOT_AVAILABLE",
+               first_seen_at=0,
+               last_seen_at=0,
+               is_rejected=True
+        )
+    

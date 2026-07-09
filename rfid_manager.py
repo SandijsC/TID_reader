@@ -49,6 +49,7 @@ class RfidManager:
         self._reading_started = False
         self._dashboard_started = False
 
+        self.result: RFIDTag
         set_dashboard_state_provider(
             self.getDashboardState,
             self.clearData,
@@ -153,19 +154,8 @@ class RfidManager:
         self._dashboard_started = True
         print("RFID dashboard started")
 
-    def getCrateData(self) -> RFIDTag | None:
-        with self._lock:
-            state = self.tag_manager.get_state()
-
-            if not state:
-                return None
-
-            latest_tag = max(
-                state.values(),
-                key=lambda tag: tag.last_seen_at,
-            )
-
-            return copy.deepcopy(latest_tag)
+    def getLastCrateData(self, crate_id: int) -> RFIDTag | None:
+        return self.tag_manager.get_latest_tag(crate_id=crate_id)
 
     def getDashboardState(self) -> dict[str, RFIDTag]:
         with self._lock:
